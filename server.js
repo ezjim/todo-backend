@@ -16,7 +16,9 @@ app.use(morgan('dev')); // http logging
 app.use(cors()); // enable CORS request
 app.use(express.static('public')); // server files from /public folder
 app.use(express.json()); // enable reading incoming json data
-app.use(express.urlencoded({ extended: true }));
+app.use(express.urlencoded({
+    extended: true
+}));
 // API Routes
 
 
@@ -32,8 +34,7 @@ app.get('/api/todos', async (req, res) => {
 
         // respond to the client with that data
         res.json(result.rows);
-    }
-    catch (err) {
+    } catch (err) {
         // handle errors
         console.log(err);
         res.status(500).json({
@@ -48,22 +49,23 @@ app.get('/api/todos/:id', async (req, res) => {
     try {
         // make a sql query using pg.Client() to select * from todos
         const result = await client.query(`
-        select from todos where id=${req.params.id}
-        returning *;
-        `);
+        SELECT * 
+        FROM todos
+        WHERE todos.id=$1`,
 
-        // respond to the client with that data
+        [req.params.Id]);
+        
         res.json(result.rows);
-    }
-    catch (err) {
+        // respond to the client with that data
         // handle errors
+    } catch (err) {
         console.log(err);
         res.status(500).json({
             error: err.message || err
         });
     }
-
 });
+
 
 // this endpoint creates a new todo
 app.post('/api/todos', async (req, res) => {
@@ -84,12 +86,11 @@ app.post('/api/todos', async (req, res) => {
             values ('${req.body.task}', false)
              returning *;
         `,
-        [/* pass in data */]);
+            [ /* pass in data */ ]);
 
         // respond to the client request with the newly created todo
         res.json(result.rows[0]);
-    }
-    catch (err) {
+    } catch (err) {
         console.log(err);
         res.status(500).json({
             error: err.message || err
@@ -105,11 +106,10 @@ app.put('/api/todos/:id', async (req, res) => {
         set complete=${req.body.complete}
         where id = ${req.params.id}
         returning *;
-        `, [/* pass in data */]);
+        `, [ /* pass in data */ ]);
 
         res.json(result.rows[0]);
-    }
-    catch (err) {
+    } catch (err) {
         console.log(err);
         res.status(500).json({
             error: err.message || err
@@ -124,11 +124,10 @@ app.delete('/api/todos/:id', async (req, res) => {
         const result = await client.query(`
             delete from todos where id=${req.params.id}
             returning *;
-        `,); // this array passes to the $1 in the query, sanitizing it to prevent little bobby drop tables
+        `, ); // this array passes to the $1 in the query, sanitizing it to prevent little bobby drop tables
 
         res.json(result.rows[0]);
-    }
-    catch (err) {
+    } catch (err) {
         console.log(err);
         res.status(500).json({
             error: err.message || err
