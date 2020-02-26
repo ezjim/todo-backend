@@ -16,9 +16,7 @@ app.use(morgan('dev')); // http logging
 app.use(cors()); // enable CORS request
 app.use(express.static('public')); // server files from /public folder
 app.use(express.json()); // enable reading incoming json data
-app.use(express.urlencoded({
-    extended: true
-}));
+app.use(express.urlencoded({ extended: true }));
 // API Routes
 
 
@@ -44,53 +42,48 @@ app.get('/api/todos', async (req, res) => {
 
 });
 
-app.get('/api/todos/:id', async (req, res) => {
+// app.get('/api/todos/:id', async (req, res) => {
 
-    try {
-        // make a sql query using pg.Client() to select * from todos
-        const result = await client.query(`
-        SELECT * 
-        FROM todos
-        WHERE todos.id=$1`,
+//     try {
+//         // make a sql query using pg.Client() to select * from todos
+//         const result = await client.query(`
+//         SELECT * 
+//         FROM todos
+//         WHERE todos.id=$1`,
 
-        [req.params.Id]);
-        
-        res.json(result.rows);
-        // respond to the client with that data
-        // handle errors
-    } catch (err) {
-        console.log(err);
-        res.status(500).json({
-            error: err.message || err
-        });
-    }
-});
+//             [req.params.todosId]);
+// con
+//         res.json(result.rows);
+//         // respond to the client with that data
+//         // handle errors
+//     } catch (err) {
+//         console.log(err);
+//         res.status(500).json({
+//             error: err.message || err
+//         });
+//     }
+// });
 
 
 // this endpoint creates a new todo
 app.post('/api/todos', async (req, res) => {
     try {
         // the user input lives is req.body.task
-
         console.log('|||||||', req.body);
         // use req.body.task to build a sql query to add a new todo
         // we also return the new todo
-
+        // eslint-disable-next-line no-unused-vars
         const query = `
         insert into todos (task, complete)
-        values ('${req.body.task}', false)
-            returning *;
+        values ($1, false)
+        returning *;
     `;
-        const result = await client.query(`
-            insert into todos (task, complete)
-            values ('${req.body.task}', false)
-             returning *;
-        `,
-            [ /* pass in data */ ]);
-
+        const result = await client.query(query,
+            [req.body.task]);
         // respond to the client request with the newly created todo
         res.json(result.rows[0]);
-    } catch (err) {
+    }
+    catch (err) {
         console.log(err);
         res.status(500).json({
             error: err.message || err
