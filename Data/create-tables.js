@@ -35,10 +35,3 @@ async function run() {
     }
 
 }
-
-
-                // CREATE TABLE users (
-                //     id SERIAL PRIMARY KEY,
-                //     email VARCHAR(256) NOT NULL,
-                //     hash VARCHAR(512) NOT NULL
-                // ); 
