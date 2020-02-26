@@ -1,5 +1,5 @@
 const client = require('../lib/client.js');
-import request from 'superagent';
+
 // async/await needs to run in a function
 run();
 
