@@ -43,6 +43,28 @@ app.get('/api/todos', async (req, res) => {
 
 });
 
+app.get('/api/todos/:id', async (req, res) => {
+
+    try {
+        // make a sql query using pg.Client() to select * from todos
+        const result = await client.query(`
+        select from todos where id=${req.params.id}
+        returning *;
+        `);
+
+        // respond to the client with that data
+        res.json(result.rows);
+    }
+    catch (err) {
+        // handle errors
+        console.log(err);
+        res.status(500).json({
+            error: err.message || err
+        });
+    }
+
+});
+
 // this endpoint creates a new todo
 app.post('/api/todos', async (req, res) => {
     try {
