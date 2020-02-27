@@ -5,34 +5,9 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const morgan = require('morgan');
-const client = require('./lib/client');
+const client = require('./lib/client.js');
 // Initiate database connection
 client.connect();
-// Auth
-const ensureAuth = require('./lib/auth/ensure-auth');
-const createAuthRoutes = require('./lib/auth/create-auth-routes');
-const authRoutes = createAuthRoutes({
-    selectUser(email) {
-        return client.query(`
-            SELECT id, email, hash, display_name as "displayName" 
-            FROM users
-            WHERE email = $1;
-        `,
-        [email]
-        ).then(result => result.rows[0]);
-    },
-    insertUser(user, hash) {
-        console.log(user);
-        return client.query(`
-            INSERT into users (email, hash, display_name)
-            VALUES ($1, $2, $3)
-            RETURNING id, email, display_name as "displayName";
-        `,
-        [user.email, hash, user.displayName]
-        ).then(result => result.rows[0]);
-    }
-});
-
 
 // Application Setup
 const app = express();
@@ -43,17 +18,47 @@ app.use(express.static('public')); // server files from /public folder
 app.use(express.json()); // enable reading incoming json data
 app.use(express.urlencoded({ extended: true }));
 
+// Auth
+// const ensureAuth = require('./lib/auth/ensure-auth');
+const createAuthRoutes = require('./lib/auth/create-auth-routes.js');
+const authRoutes = createAuthRoutes({
+    selectUser(email) {
+        return client.query(`
+            SELECT id, email, hash  
+            FROM users
+            WHERE email = $1;
+        `,
+        [email]
+        ).then(result => result.rows[0]);
+    },
+    insertUser(user, hash) {
+        console.log(user);
+        return client.query(`
+            INSERT into users (email, hash)
+            VALUES ($1, $2)
+            RETURNING id, email;
+        `,
+        [user.email, hash]
+        ).then(result => result.rows[0]);
+    }
+});
+app.use('/api/auth', authRoutes);
+const ensureAuth = require('./lib/auth/ensure-auth.js');
+app.use('/api', ensureAuth);
+
+
 
 // API Routes
 // *** TODOS ***
 // this is /GET request that returns whole list of todos
 app.get('/api/todos', async (req, res) => {
 
+    console.log(req.userId);
     try {
         // make a sql query using pg.Client() to select * from todos
         const result = await client.query(`
-            select * from todos;
-        `);
+                select * from todos where user_id=$1;
+        `, [req.userId]);
 
         // respond to the client with that data
         res.json(result.rows);
@@ -67,27 +72,6 @@ app.get('/api/todos', async (req, res) => {
 
 });
 
-// app.get('/api/todos/:id', async (req, res) => {
-
-//     try {
-//         // make a sql query using pg.Client() to select * from todos
-//         const result = await client.query(`
-//         SELECT * 
-//         FROM todos
-//         WHERE todos.id=$1`,
-
-//             [req.params.todosId]);
-// con
-//         res.json(result.rows);
-//         // respond to the client with that data
-//         // handle errors
-//     } catch (err) {
-//         console.log(err);
-//         res.status(500).json({
-//             error: err.message || err
-//         });
-//     }
-// });
 
 
 // this endpoint creates a new todo
@@ -98,17 +82,17 @@ app.post('/api/todos', async (req, res) => {
         // use req.body.task to build a sql query to add a new todo
         // we also return the new todo
         // eslint-disable-next-line no-unused-vars
-        const query = `
-        insert into todos (task, complete)
-        values ($1, false)
+        const result = await client.query(`
+        insert into todos (task, complete, user_id)
+        values ($1, false, $2)
         returning *;
-    `;
-        const result = await client.query(query,
-            [req.body.task]);
+    `,
+        // const result = await client.query(query,
+        [req.body.task, req.userId]);
         // respond to the client request with the newly created todo
-        res.json(result.rows[0]);
-    }
-    catch (err) {
+        res.json(result.rows);
+        // res.json(result.rows[0]);
+    } catch (err) {
         console.log(err);
         res.status(500).json({
             error: err.message || err
@@ -137,13 +121,13 @@ app.put('/api/todos/:id', async (req, res) => {
 
 app.delete('/api/todos/:id', async (req, res) => {
     // get the id that was passed in the route:
-
+    
     try {
         const result = await client.query(`
-            delete from todos where id=${req.params.id}
-            returning *;
-        `, ); // this array passes to the $1 in the query, sanitizing it to prevent little bobby drop tables
-
+        delete from todos where id=${req.params.id}
+        returning *;
+        `,); // this array passes to the $1 in the query, sanitizing it to prevent little bobby drop tables
+        
         res.json(result.rows[0]);
     } catch (err) {
         console.log(err);
@@ -156,4 +140,27 @@ app.delete('/api/todos/:id', async (req, res) => {
 // Start the server
 app.listen(PORT, () => {
     console.log('server running on PORT', PORT);
+
 });
+
+        // app.get('/api/todos/:id', async (req, res) => {
+        
+        //     try {
+        //         // make a sql query using pg.Client() to select * from todos
+        //         const result = await client.query(`
+        //         SELECT * 
+        //         FROM todos
+        //         WHERE todos.id=$1`,
+        
+        //             [req.params.todosId]);
+        // con
+        //         res.json(result.rows);
+        //         // respond to the client with that data
+        //         // handle errors
+        //     } catch (err) {
+        //         console.log(err);
+        //         res.status(500).json({
+        //             error: err.message || err
+        //         });
+        //     }
+        // });
