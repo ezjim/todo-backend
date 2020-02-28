@@ -21,6 +21,7 @@ app.use(express.urlencoded({ extended: true }));
 // Auth
 // const ensureAuth = require('./lib/auth/ensure-auth');
 const createAuthRoutes = require('./lib/auth/create-auth-routes.js');
+
 const authRoutes = createAuthRoutes({
     selectUser(email) {
         return client.query(`
@@ -42,7 +43,11 @@ const authRoutes = createAuthRoutes({
         ).then(result => result.rows[0]);
     }
 });
+
+//before ensure Auth, but after other middleware:
 app.use('/api/auth', authRoutes);
+
+// everthing that starts with '/api' needs an auth token!!!!!!!!!!!
 const ensureAuth = require('./lib/auth/ensure-auth.js');
 app.use('/api', ensureAuth);
 
@@ -90,8 +95,8 @@ app.post('/api/todos', async (req, res) => {
         // const result = await client.query(query,
         [req.body.task, req.userId]);
         // respond to the client request with the newly created todo
-        res.json(result.rows);
-        // res.json(result.rows[0]);
+        // res.json(result.rows);
+        res.json(result.rows[0]);
     } catch (err) {
         console.log(err);
         res.status(500).json({
